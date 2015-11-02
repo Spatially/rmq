@@ -34,6 +34,7 @@ type Queue interface {
 	StopConsuming() bool
 	AddConsumer(tag string, consumer Consumer) string
 	AddBatchConsumer(tag string, batchSize int, consumer BatchConsumer) string
+	AddClosableConsumer(tag string, consumer Consumer) string
 	PurgeReady() bool
 	PurgeRejected() bool
 	ReturnRejected(count int) int
@@ -259,6 +260,14 @@ func (queue *redisQueue) AddBatchConsumer(tag string, batchSize int, consumer Ba
 	return name
 }
 
+// AddClosableConsumer adds a closable consumer to the queue
+func (queue *redisQueue) AddClosableConsumer(tag string, consumer Consumer) string {
+	name := queue.addConsumer(tag)
+	go queue.consumerClosableConsume(consumer, name)
+	return name
+}
+
+
 func (queue *redisQueue) GetConsumers() []string {
 	result := queue.redisClient.SMembers(queue.consumersKey)
 	if redisErrIsNil(result) {
@@ -372,6 +381,29 @@ func (queue *redisQueue) consumerBatchConsume(batchSize int, consumer BatchConsu
 
 		batch = []Delivery{}
 		waitUntil = time.Now().UTC().Add(time.Second)
+	}
+}
+
+func (queue *redisQueue) consumerClosableConsume(consumer Consumer, name string) {
+	defer queue.RemoveConsumer(name)
+
+	var closer chan bool
+	switch c := consumer.(type) {
+		case ClosableConsumer:
+			closer = c.Closer()
+		default:
+			// Maybe: log.Panic("rmq queue consumer doesn't implement ClosableConsumer interface)
+			return
+	}
+	for {
+		select {
+		case delivery := <-queue.deliveryChan:
+			// debug(fmt.Sprintf("consumer consume %s %s", delivery, consumer)) // COMMENTOUT
+			consumer.Consume(delivery)
+		case <-closer:
+			// debug(fmt.Sprintf("consumer close %s", consumer)) // COMMENTOUT
+			return
+		}
 	}
 }
 

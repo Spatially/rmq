@@ -45,6 +45,10 @@ func (queue *TestQueue) AddBatchConsumer(tag string, batchSize int, consumer Bat
 	return ""
 }
 
+func (queue *TestQueue) AddClosableConsumer(tag string, consumer Consumer) string {
+	return ""
+}
+
 func (queue *TestQueue) ReturnRejected(count int) int {
 	return 0
 }
