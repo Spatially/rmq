@@ -6,5 +6,5 @@ type Consumer interface {
 
 type ClosableConsumer interface {
 	Closer() chan bool
-	Close()
+	Close() error
 }

@@ -400,6 +400,7 @@ func (queue *redisQueue) consumerClosableConsume(consumer Consumer, name string)
 		case delivery := <-queue.deliveryChan:
 			// debug(fmt.Sprintf("consumer consume %s %s", delivery, consumer)) // COMMENTOUT
 			consumer.Consume(delivery)
+			return
 		case <-closer:
 			// debug(fmt.Sprintf("consumer close %s", consumer)) // COMMENTOUT
 			return
