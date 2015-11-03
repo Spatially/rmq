@@ -387,10 +387,14 @@ func (queue *redisQueue) consumerBatchConsume(batchSize int, consumer BatchConsu
 func (queue *redisQueue) consumerClosableConsume(consumer Consumer, name string) {
 	defer queue.RemoveConsumer(name)
 
-	var closer chan bool
+	var (
+		closer chan bool
+		oneTime bool
+	)
 	switch c := consumer.(type) {
 		case ClosableConsumer:
 			closer = c.Closer()
+			oneTime = c.ConsumeOneTime()
 		default:
 			// Maybe: log.Panic("rmq queue consumer doesn't implement ClosableConsumer interface)
 			return
@@ -400,7 +404,9 @@ func (queue *redisQueue) consumerClosableConsume(consumer Consumer, name string)
 		case delivery := <-queue.deliveryChan:
 			// debug(fmt.Sprintf("consumer consume %s %s", delivery, consumer)) // COMMENTOUT
 			consumer.Consume(delivery)
-			return
+			if oneTime {
+				return
+			}
 		case <-closer:
 			// debug(fmt.Sprintf("consumer close %s", consumer)) // COMMENTOUT
 			return
