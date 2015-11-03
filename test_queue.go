@@ -45,7 +45,7 @@ func (queue *TestQueue) AddBatchConsumer(tag string, batchSize int, consumer Bat
 	return ""
 }
 
-func (queue *TestQueue) AddClosableConsumer(tag string, consumer Consumer) string {
+func (queue *TestQueue) AddClosableConsumer(tag string, consumer ClosableConsumer) string {
 	return ""
 }
 

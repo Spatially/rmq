@@ -34,7 +34,7 @@ type Queue interface {
 	StopConsuming() bool
 	AddConsumer(tag string, consumer Consumer) string
 	AddBatchConsumer(tag string, batchSize int, consumer BatchConsumer) string
-	AddClosableConsumer(tag string, consumer Consumer) string
+	AddClosableConsumer(tag string, consumer ClosableConsumer) string
 	PurgeReady() bool
 	PurgeRejected() bool
 	ReturnRejected(count int) int
@@ -261,7 +261,7 @@ func (queue *redisQueue) AddBatchConsumer(tag string, batchSize int, consumer Ba
 }
 
 // AddClosableConsumer adds a closable consumer to the queue
-func (queue *redisQueue) AddClosableConsumer(tag string, consumer Consumer) string {
+func (queue *redisQueue) AddClosableConsumer(tag string, consumer ClosableConsumer) string {
 	name := queue.addConsumer(tag)
 	go queue.consumerClosableConsume(consumer, name)
 	return name
@@ -384,21 +384,12 @@ func (queue *redisQueue) consumerBatchConsume(batchSize int, consumer BatchConsu
 	}
 }
 
-func (queue *redisQueue) consumerClosableConsume(consumer Consumer, name string) {
+func (queue *redisQueue) consumerClosableConsume(consumer ClosableConsumer, name string) {
 	defer queue.RemoveConsumer(name)
 
-	var (
-		closer chan bool
-		oneTime bool
-	)
-	switch c := consumer.(type) {
-		case ClosableConsumer:
-			closer = c.Closer()
-			oneTime = c.ConsumeOneTime()
-		default:
-			// Maybe: log.Panic("rmq queue consumer doesn't implement ClosableConsumer interface)
-			return
-	}
+	closer := consumer.Closer()
+	oneTime := consumer.ConsumeOneTime()
+
 	for {
 		select {
 		case delivery := <-queue.deliveryChan:

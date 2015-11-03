@@ -5,7 +5,8 @@ type Consumer interface {
 }
 
 type ClosableConsumer interface {
-	Closer() chan bool
+	Consumer
 	Close() error
+	Closer() chan bool
 	ConsumeOneTime() bool
 }
